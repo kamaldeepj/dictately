@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, users, dictionary } from './schema';
+import { activityLogs, users, dictionary, transcriptions, NewTranscription } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -74,4 +74,91 @@ export async function getDictionaryWords() {
     .from(dictionary)
     .where(and(eq(dictionary.userId, user.id), isNull(dictionary.deletedAt)))
     .orderBy(desc(dictionary.createdAt));
+}
+
+export async function createTranscription(data: Omit<NewTranscription, 'userId'>) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [transcription] = await db
+    .insert(transcriptions)
+    .values({
+      ...data,
+      userId: user.id,
+    })
+    .returning();
+
+  return transcription;
+}
+
+export async function updateTranscription(id: number, data: Partial<NewTranscription>) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [transcription] = await db
+    .update(transcriptions)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(transcriptions.id, id), eq(transcriptions.userId, user.id)))
+    .returning();
+
+  return transcription;
+}
+
+export async function getTranscription(id: number) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [transcription] = await db
+    .select()
+    .from(transcriptions)
+    .where(and(eq(transcriptions.id, id), eq(transcriptions.userId, user.id), isNull(transcriptions.deletedAt)))
+    .limit(1);
+
+  return transcription;
+}
+
+export async function getTranscriptions() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  return await db
+    .select({
+      id: transcriptions.id,
+      transcription: transcriptions.transcription,
+      status: transcriptions.status,
+      createdAt: transcriptions.createdAt,
+      updatedAt: transcriptions.updatedAt,
+    })
+    .from(transcriptions)
+    .where(and(eq(transcriptions.userId, user.id), isNull(transcriptions.deletedAt)))
+    .orderBy(desc(transcriptions.createdAt));
+}
+
+export async function deleteTranscription(id: number) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const [transcription] = await db
+    .update(transcriptions)
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(transcriptions.id, id), eq(transcriptions.userId, user.id)))
+    .returning();
+
+  return transcription;
 }

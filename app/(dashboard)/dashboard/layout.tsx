@@ -4,7 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Users, Settings, Shield, Activity, Menu, Book, Home } from "lucide-react";
+import {
+  Users,
+  Settings,
+  Shield,
+  Activity,
+  Menu,
+  Book,
+  Home,
+} from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -18,8 +26,6 @@ export default function DashboardLayout({
     { href: "/dashboard", icon: Home, label: "Home" },
     { href: "/dashboard/dictionary", icon: Book, label: "Dictionary" },
     { href: "/dashboard/general", icon: Settings, label: "Settings" },
-    { href: "/dashboard/activity", icon: Activity, label: "Activity" },
-    { href: "/dashboard/security", icon: Shield, label: "Security" },
   ];
 
   // Find the active nav item based on pathname
