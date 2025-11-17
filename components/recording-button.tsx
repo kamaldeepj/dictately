@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { useScribe } from "@elevenlabs/react";
@@ -17,15 +17,50 @@ export function RecordingButton() {
   );
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const currentTranscriptionIdRef = useRef<number | null>(null);
 
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
-    onPartialTranscript: (data) => {
+    onPartialTranscript: async (data) => {
       // Partial transcript is available via scribe.partialTranscript
-      console.log("Partial:", data.text);
+      console.log("Partial:", data.text, currentTranscriptionIdRef.current);
+      if (currentTranscriptionIdRef.current && data.text) {
+        try {
+          await fetch("/api/transcriptions", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: currentTranscriptionIdRef.current,
+              transcription: data.text,
+              status: "in_progress",
+            }),
+          });
+        } catch (error) {
+          console.error("Failed to update transcription:", error);
+        }
+      }
     },
-    onCommittedTranscript: (data) => {
+    onCommittedTranscript: async (data) => {
       console.log("Committed:", data.text);
+      if (currentTranscriptionIdRef.current && data.text) {
+        try {
+          await fetch("/api/transcriptions", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: currentTranscriptionIdRef.current,
+              transcription: data.text,
+              status: "in_progress",
+            }),
+          });
+        } catch (error) {
+          console.error("Failed to update transcription:", error);
+        }
+      }
     },
     onCommittedTranscriptWithTimestamps: (data) => {
       console.log("Committed with timestamps:", data.text);
@@ -45,6 +80,25 @@ export function RecordingButton() {
   const handleStop = useCallback(async () => {
     try {
       await scribe.disconnect();
+      
+      // Mark transcription as completed
+      if (currentTranscriptionIdRef.current) {
+        try {
+          await fetch("/api/transcriptions", {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: currentTranscriptionIdRef.current,
+              status: "completed",
+            }),
+          });
+          currentTranscriptionIdRef.current = null;
+        } catch (error) {
+          console.error("Failed to mark transcription as completed:", error);
+        }
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(`Failed to stop recording: ${err.message}`);
@@ -200,6 +254,26 @@ export function RecordingButton() {
       setError(null);
       setIsConnecting(true);
 
+      // Create a new transcription in the database
+      const transcriptionResponse = await fetch("/api/transcriptions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          transcription: "",
+          status: "pending",
+        }),
+      });
+
+      if (!transcriptionResponse.ok) {
+        throw new Error("Failed to create transcription");
+      }
+
+      const newTranscription = await transcriptionResponse.json();
+      console.log("New transcription:", newTranscription);
+      currentTranscriptionIdRef.current = newTranscription.id;
+
       // Fetch a single use token from the server
       const token = await fetchTokenFromServer();
 
@@ -215,6 +289,7 @@ export function RecordingButton() {
       setIsConnecting(false);
     } catch (err) {
       setIsConnecting(false);
+      currentTranscriptionIdRef.current = null;
       if (err instanceof Error) {
         if (
           err.name === "NotAllowedError" ||

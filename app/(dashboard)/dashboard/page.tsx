@@ -19,10 +19,22 @@ export default function DashboardPage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchTranscriptions();
+    // Initial load
+    fetchTranscriptions(true);
+
+    // Set up polling interval to refresh transcriptions every 2 seconds
+    const intervalId = setInterval(() => {
+      // Only fetch if the document is visible (tab is active)
+      if (document.visibilityState === 'visible') {
+        fetchTranscriptions(false);
+      }
+    }, 2000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
-  const fetchTranscriptions = async () => {
+  const fetchTranscriptions = async (isInitialLoad = false) => {
     try {
       const response = await fetch("/api/transcriptions");
       if (response.ok) {
@@ -32,7 +44,10 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Error fetching transcriptions:", error);
     } finally {
-      setLoading(false);
+      // Only set loading to false on initial load
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   };
 
