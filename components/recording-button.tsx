@@ -16,6 +16,7 @@ export function RecordingButton() {
     null
   );
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
@@ -54,6 +55,24 @@ export function RecordingButton() {
   // Check microphone permission on mount
   useEffect(() => {
     checkMicrophonePermission();
+  }, []);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+        userAgent.toLowerCase()
+      );
+      const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth <= 768;
+      
+      setIsMobile(isMobileDevice || (hasTouchScreen && isSmallScreen));
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Keyboard shortcut handler
@@ -312,8 +331,8 @@ export function RecordingButton() {
           {permissionState === "granted" &&
             !scribe.isConnected &&
             !isConnecting &&
-            "Press Space to start"}
-          {scribe.isConnected && "Press Space to stop"}
+            (isMobile ? "Tap to start" : "Press Space to start")}
+          {scribe.isConnected && (isMobile ? "Tap to stop" : "Press Space to stop")}
           {permissionState !== "granted" && "Click to enable"}
         </span>
       </div>
