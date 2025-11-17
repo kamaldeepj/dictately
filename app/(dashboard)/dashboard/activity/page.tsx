@@ -8,6 +8,10 @@ import {
   AlertCircle,
   UserMinus,
   type LucideIcon,
+  FileText,
+  Pencil,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
 import { getActivityLogs } from '@/lib/db/queries';
@@ -19,6 +23,12 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.UPDATE_PASSWORD]: Lock,
   [ActivityType.DELETE_ACCOUNT]: UserMinus,
   [ActivityType.UPDATE_ACCOUNT]: Settings,
+  [ActivityType.ADD_WORD]: Plus,
+  [ActivityType.DELETE_WORD]: Minus,
+  [ActivityType.UPDATE_WORD]: Pencil,
+  [ActivityType.CREATE_TRANSCRIPTION]: FileText,
+  [ActivityType.UPDATE_TRANSCRIPTION]: FileText,
+  [ActivityType.DELETE_TRANSCRIPTION]: FileText,
 };
 
 function getRelativeTime(date: Date) {
