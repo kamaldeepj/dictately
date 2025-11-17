@@ -22,12 +22,25 @@ export default function DashboardLayout({
     { href: "/dashboard/security", icon: Shield, label: "Security" },
   ];
 
+  // Find the active nav item based on pathname
+  // Check more specific routes first, then fall back to home route
+  const activeItem =
+    navItems
+      .slice()
+      .reverse()
+      .find((item) => {
+        if (item.href === "/dashboard") {
+          return pathname === "/dashboard" || pathname === "/dashboard/";
+        }
+        return pathname === item.href || pathname.startsWith(item.href + "/");
+      }) || navItems[0];
+
   return (
     <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
       {/* Mobile header */}
       <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
         <div className="flex items-center">
-          <span className="font-medium">Settings</span>
+          <span className="font-medium">{activeItem.label}</span>
         </div>
         <Button
           className="-mr-3"
