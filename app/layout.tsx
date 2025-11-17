@@ -5,7 +5,7 @@ import { getUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
-  title: 'Next.js SaaS Starter',
+  title: 'Dictately',
   description: 'Get started quickly with Next.js and Postgres.'
 };
 
