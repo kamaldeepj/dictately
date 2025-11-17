@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, users } from './schema';
+import { activityLogs, users, dictionary } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -56,4 +56,22 @@ export async function getActivityLogs() {
     .where(eq(activityLogs.userId, user.id))
     .orderBy(desc(activityLogs.timestamp))
     .limit(10);
+}
+
+export async function getDictionaryWords() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  return await db
+    .select({
+      id: dictionary.id,
+      word: dictionary.word,
+      createdAt: dictionary.createdAt,
+      updatedAt: dictionary.updatedAt
+    })
+    .from(dictionary)
+    .where(and(eq(dictionary.userId, user.id), isNull(dictionary.deletedAt)))
+    .orderBy(desc(dictionary.createdAt));
 }

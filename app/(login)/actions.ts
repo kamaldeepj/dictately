@@ -7,8 +7,10 @@ import {
   User,
   users,
   activityLogs,
+  dictionary,
   type NewUser,
   type NewActivityLog,
+  type NewDictionary,
   ActivityType,
 } from '@/lib/db/schema';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
@@ -239,5 +241,98 @@ export const updateAccount = validatedActionWithUser(
     ]);
 
     return { name, success: 'Account updated successfully.' };
+  }
+);
+
+const addWordSchema = z.object({
+  word: z.string().min(1, 'Word is required').max(100, 'Word must be 100 characters or less')
+});
+
+export const addWord = validatedActionWithUser(
+  addWordSchema,
+  async (data, _, user) => {
+    const { word } = data;
+
+    const newWord: NewDictionary = {
+      userId: user.id,
+      word: word.trim()
+    };
+
+    await Promise.all([
+      db.insert(dictionary).values(newWord),
+      logActivity(user.id, ActivityType.ADD_WORD)
+    ]);
+
+    return { success: 'Word added successfully.' };
+  }
+);
+
+const updateWordSchema = z.object({
+  id: z.string().transform((val) => parseInt(val, 10)),
+  word: z.string().min(1, 'Word is required').max(100, 'Word must be 100 characters or less')
+});
+
+export const updateWord = validatedActionWithUser(
+  updateWordSchema,
+  async (data, _, user) => {
+    const { id, word } = data;
+
+    // Verify the word belongs to the user
+    const [existingWord] = await db
+      .select()
+      .from(dictionary)
+      .where(eq(dictionary.id, id))
+      .limit(1);
+
+    if (!existingWord || existingWord.userId !== user.id) {
+      return {
+        error: 'Word not found or you do not have permission to update it.'
+      };
+    }
+
+    await Promise.all([
+      db
+        .update(dictionary)
+        .set({ word: word.trim(), updatedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(dictionary.id, id)),
+      logActivity(user.id, ActivityType.UPDATE_WORD)
+    ]);
+
+    return { success: 'Word updated successfully.' };
+  }
+);
+
+const deleteWordSchema = z.object({
+  id: z.string().transform((val) => parseInt(val, 10))
+});
+
+export const deleteWord = validatedActionWithUser(
+  deleteWordSchema,
+  async (data, _, user) => {
+    const { id } = data;
+
+    // Verify the word belongs to the user
+    const [existingWord] = await db
+      .select()
+      .from(dictionary)
+      .where(eq(dictionary.id, id))
+      .limit(1);
+
+    if (!existingWord || existingWord.userId !== user.id) {
+      return {
+        error: 'Word not found or you do not have permission to delete it.'
+      };
+    }
+
+    // Soft delete
+    await Promise.all([
+      db
+        .update(dictionary)
+        .set({ deletedAt: sql`CURRENT_TIMESTAMP` })
+        .where(eq(dictionary.id, id)),
+      logActivity(user.id, ActivityType.DELETE_WORD)
+    ]);
+
+    return { success: 'Word deleted successfully.' };
   }
 );
